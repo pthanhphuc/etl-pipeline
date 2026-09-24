@@ -1,0 +1,67 @@
+dataset: customer
+target_table: customer
+source: { format: csv, file_glob: "**/*.csv" }
+load:
+  {
+    mode: differential_update,
+    key_columns: [customer_id],
+    duplicate_key_policy: keep_first,
+    flag_threshold: 0.15,
+  }
+columns:
+  customer_id: { type: integer, required: true, primary_key: true }
+  full_name: { type: string, width: 120, required: true }
+  email: { type: string, width: 200, required: true }
+  phone: { type: string, width: 32 }
+  birth_date: { type: date }
+  address_line: { type: string, width: 255 }
+  city: { type: string, width: 80 }
+  country: { type: string, width: 2 }
+  loyalty_tier: { type: string, width: 10, required: true }
+  credit_score: { type: integer }
+  registered_at: { type: timestamp, required: true }
+  is_active: { type: boolean, required: true }
+  full_name_last: { type: string, width: 60 }
+  full_name_first: { type: string, width: 60 }
+  email_domain: { type: string, width: 120 }
+  phone_country_code: { type: string, width: 5 }
+  phone_number: { type: string, width: 20 }
+standardization:
+  - { function: conv_name, column: full_name, name_order: family_first }
+  - { function: conv_email, column: email, strip_plus_tag: true }
+  - { function: conv_tel, column: phone, dial_plan: vietnam }
+  - { function: conv_address, column: address_line }
+  - { function: title, column: city }
+  - { function: map_values, column: country, mapping: countries }
+  - { function: upper, column: loyalty_tier }
+  - { function: to_date, column: birth_date }
+  - {
+      function: to_timestamp,
+      column: registered_at,
+      source_timezone: Asia/Ho_Chi_Minh,
+    }
+  - { function: to_boolean, column: is_active }
+produced_columns:
+  [
+    customer_id,
+    full_name,
+    full_name_last,
+    full_name_first,
+    email,
+    email_domain,
+    phone,
+    phone_country_code,
+    phone_number,
+    birth_date,
+    address_line,
+    city,
+    country,
+    loyalty_tier,
+    credit_score,
+    registered_at,
+    is_active,
+  ]
+constraints:
+  loyalty_tier: { allowed: [BRONZE, SILVER, GOLD, PLATINUM] }
+  credit_score: { min: 300, max: 850 }
+  birth_date: { not_future: true }

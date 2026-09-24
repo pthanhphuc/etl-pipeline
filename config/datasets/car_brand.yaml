@@ -1,0 +1,26 @@
+dataset: car_brand
+target_table: car_brand
+source: { format: csv, file_glob: "**/*.csv" }
+load:
+  {
+    mode: replace_all,
+    key_columns: [brand_code],
+    duplicate_key_policy: keep_first,
+    flag_threshold: 0.15,
+  }
+columns:
+  brand_code: { type: string, width: 10, required: true, primary_key: true }
+  brand_name: { type: string, width: 80, required: true }
+  country_origin: { type: string, width: 2 }
+  founded_year: { type: integer }
+  is_premium: { type: boolean, required: true }
+standardization:
+  [
+    { function: upper, column: brand_code },
+    { function: title, column: brand_name },
+    { function: map_values, column: country_origin, mapping: countries },
+    { function: to_boolean, column: is_premium },
+  ]
+produced_columns:
+  [brand_code, brand_name, country_origin, founded_year, is_premium]
+constraints: {}

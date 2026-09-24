@@ -1,0 +1,60 @@
+functions:
+  conv_email:
+    {
+      kind: conversion,
+      input: email,
+      outputs: [email, email_domain],
+      suffixes: ["", domain],
+    }
+  conv_tel:
+    {
+      kind: conversion,
+      input: phone,
+      outputs: [phone, phone_country_code, phone_number],
+      suffixes: ["", country_code, number],
+    }
+  conv_name:
+    {
+      kind: conversion,
+      input: full_name,
+      outputs: [full_name, full_name_last, full_name_first, full_name_middle],
+      suffixes: ["", last, first, middle],
+    }
+  conv_address:
+    {
+      kind: conversion,
+      input: address_line,
+      outputs: [address_line],
+      suffixes: [""],
+    }
+  map_values: { kind: generic }
+  upper: { kind: generic }
+  title: { kind: generic }
+  to_date: { kind: generic }
+  to_timestamp: { kind: generic }
+  to_boolean: { kind: generic }
+reference_data:
+  booleans:
+    {
+      true: ["Y", "YES", "TRUE", "1", "T"],
+      false: ["N", "NO", "FALSE", "0", "F"],
+    }
+  countries: { vietnam: VN, "viet nam": VN, vn: VN }
+  date_formats: ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]
+  timestamp_formats: ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M", "%m/%d/%Y %H:%M"]
+  dial_plans:
+    vietnam:
+      {
+        country_code: "84",
+        trunk_prefix: "0",
+        national_lengths: [9, 10],
+        legacy_prefixes: { "120": "70" },
+        strip_characters: " -().",
+      }
+  name:
+    {
+      honorifics: [mr, mr., mrs, mrs., ms, ms., miss, dr, dr.],
+      particles: [van, der, de, da],
+    }
+  address_abbreviations:
+    { st: Street, rd: Road, q: District, hcmc: Ho Ho Chi Minh City }

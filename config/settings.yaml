@@ -1,0 +1,25 @@
+version: 1
+paths:
+  raw_root: raw_data
+  transform_root: transform_data
+  warning_root: warning_data
+  source_prefix: "{raw_root}/{dataset}/{yyyy}/{mm}/{dd}"
+  source_files: "{source_prefix}/**/*.csv"
+  transform_partition: "{transform_root}/{dataset}/{yyyy}/{mm}/{dd}"
+  warning_partition: "{warning_root}/{dataset}/{yyyy}/{mm}/{dd}"
+source_prefix:
+  { pattern: "{raw_root}/{dataset}/{yyyy}/{mm}/{dd}", date_format: "%Y/%m/%d" }
+warehouse: { timezone: UTC }
+null_tokens: ["", "NULL", "null", "N/A", "n/a", "-"]
+readers:
+  csv: { extension: .csv, options: { encoding: utf-8, sep: ",", header: 0 } }
+audit_columns:
+  - { name: _source_file, type: string, width: 1024, required: true }
+  - { name: _source_line, type: integer, required: true }
+  - { name: _run_id, type: string, width: 64, required: true }
+defaults:
+  source: { format: csv, file_glob: "**/*.csv" }
+  load: { duplicate_key_policy: keep_first, flag_threshold: 0.15 }
+  standardization: []
+  produced_columns: []
+  constraints: {}

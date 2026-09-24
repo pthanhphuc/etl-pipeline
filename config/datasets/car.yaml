@@ -1,0 +1,63 @@
+dataset: car
+target_table: car
+source: { format: csv, file_glob: "**/*.csv" }
+load:
+  {
+    mode: differential_update,
+    key_columns: [car_id],
+    duplicate_key_policy: keep_first,
+    flag_threshold: 0.15,
+  }
+columns:
+  car_id:
+    {
+      type: string,
+      width: 20,
+      required: true,
+      primary_key: true,
+      pattern: "^CAR-[0-9]{5}$",
+    }
+  brand_code: { type: string, width: 10, required: true }
+  model: { type: string, width: 80, required: true }
+  plate_number:
+    {
+      type: string,
+      width: 20,
+      required: true,
+      unique: true,
+      pattern: "^[0-9]{2}[A-Z]-[0-9]{5}$",
+    }
+  manufacture_year: { type: integer, required: true }
+  color: { type: string, width: 30 }
+  seats: { type: integer, required: true }
+  fuel_type: { type: string, width: 15, required: true }
+  daily_rate: { type: decimal, precision: 12, scale: 2, required: true }
+  status: { type: string, width: 15, required: true }
+  last_service_at: { type: timestamp }
+standardization:
+  [
+    { function: upper, column: car_id },
+    { function: upper, column: brand_code },
+    { function: upper, column: plate_number },
+    { function: upper, column: fuel_type },
+    { function: upper, column: status },
+  ]
+produced_columns:
+  [
+    car_id,
+    brand_code,
+    model,
+    plate_number,
+    manufacture_year,
+    color,
+    seats,
+    fuel_type,
+    daily_rate,
+    status,
+    last_service_at,
+  ]
+constraints:
+  fuel_type: { allowed: [PETROL, DIESEL, HYBRID, ELECTRIC, LPG] }
+  daily_rate: { min_exclusive: 0 }
+  manufacture_year: { min: 2000, max: 2100 }
+  status: { allowed: [AVAILABLE, RENTED, MAINTENANCE, RETIRED] }

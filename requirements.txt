@@ -1,0 +1,9 @@
+# Runtime dependencies
+pandas>=2.2,<3
+PyYAML>=6.0,<7
+pyarrow>=16,<22
+psycopg[binary]>=3.2,<4
+
+# Development and orchestration dependencies
+pytest>=8,<9
+# Install Airflow separately using its official constraints file when needed.

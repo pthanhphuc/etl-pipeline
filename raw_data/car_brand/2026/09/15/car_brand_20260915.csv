@@ -1,0 +1,14 @@
+brand_code,brand_name,country_origin,founded_year,is_premium
+TOYOTA,Toyota,JP,1937,N
+HONDA,Honda,JP,1948,N
+VINFAST,VinFast,VN,2017,Y
+FORD,Ford,US,1903,N
+BMW,BMW,DE,1916,Y
+MERCEDES,Mercedes-Benz,DE,1926,Y
+AUDI,Audi,DE,1909,Y
+KIA,Kia,KR,1944,N
+MAZDA,Mazda,JP,1920,N
+TESLA,Tesla,US,2003,Y
+LEXUS,Lexus,JP,1989,Y
+SUBARU,Subaru,JP,1953,N
+,Missing Code,US,2000,N

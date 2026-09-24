@@ -1,0 +1,57 @@
+dataset: order
+target_table: order
+source: { format: csv, file_glob: "**/*.csv" }
+load:
+  {
+    mode: insert_only,
+    key_columns: [order_id],
+    duplicate_key_policy: keep_first,
+    flag_threshold: 0.15,
+  }
+columns:
+  order_id:
+    {
+      type: string,
+      width: 20,
+      required: true,
+      primary_key: true,
+      pattern: "^ORD-[0-9]{4}-[0-9]{6}$",
+    }
+  customer_id: { type: integer, required: true }
+  car_id: { type: string, width: 20, required: true }
+  order_ts: { type: timestamp, required: true }
+  pickup_date: { type: date, required: true }
+  return_date: { type: date, required: true }
+  rental_days: { type: integer }
+  total_amount: { type: decimal, precision: 14, scale: 2, required: true }
+  currency: { type: string, width: 3, required: true }
+  payment_method: { type: string, width: 20, required: true }
+  order_status: { type: string, width: 15, required: true }
+standardization:
+  [
+    { function: upper, column: car_id },
+    { function: to_timestamp, column: order_ts },
+    { function: to_date, column: pickup_date },
+    { function: to_date, column: return_date },
+    { function: upper, column: currency },
+    { function: upper, column: payment_method },
+    { function: upper, column: order_status },
+  ]
+produced_columns:
+  [
+    order_id,
+    customer_id,
+    car_id,
+    order_ts,
+    pickup_date,
+    return_date,
+    rental_days,
+    total_amount,
+    currency,
+    payment_method,
+    order_status,
+  ]
+constraints:
+  currency: { allowed: [VND, USD, SGD, EUR] }
+  payment_method: { allowed: [CASH, CARD, TRANSFER, EWALLET] }
+  order_status: { allowed: [NEW, CONFIRMED, ONGOING, COMPLETED, CANCELLED] }

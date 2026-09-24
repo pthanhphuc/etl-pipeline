@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "metadata-driven-etl"
+version = "0.1.0"
+description = "Metadata-driven ETL pipeline bootstrap"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pandas>=2.2,<3",
+    "PyYAML>=6.0,<7",
+    "pyarrow>=16,<22",
+    "psycopg[binary]>=3.2,<4",
+]
+
+[project.scripts]
+etl = "etl.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "integration: requires a reachable PostgreSQL database and ETL_DATABASE_URL",
+]
