@@ -1,11 +1,11 @@
-"""PostgreSQL DDL generated from dataset metadata."""
+﻿"""PostgreSQL DDL generated from dataset metadata."""
 
 from __future__ import annotations
 
 from typing import Any, Iterable
 
-from .config import DatasetConfig
-from .types import postgres_type
+from etl.core.config import DatasetConfig
+from etl.core.types import postgres_type
 
 
 def quote_identifier(identifier: str) -> str:

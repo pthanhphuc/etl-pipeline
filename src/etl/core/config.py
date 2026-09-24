@@ -1,4 +1,4 @@
-"""Load and validate the metadata used by the ETL pipeline."""
+﻿"""Load and validate the metadata used by the ETL pipeline."""
 
 from __future__ import annotations
 

@@ -2,11 +2,9 @@ version: 1
 paths:
   raw_root: raw_data
   transform_root: transform_data
-  warning_root: warning_data
   source_prefix: "{raw_root}/{dataset}/{yyyy}/{mm}/{dd}"
   source_files: "{source_prefix}/**/*.csv"
   transform_partition: "{transform_root}/{dataset}/{yyyy}/{mm}/{dd}"
-  warning_partition: "{warning_root}/{dataset}/{yyyy}/{mm}/{dd}"
 source_prefix:
   { pattern: "{raw_root}/{dataset}/{yyyy}/{mm}/{dd}", date_format: "%Y/%m/%d" }
 warehouse: { timezone: UTC }

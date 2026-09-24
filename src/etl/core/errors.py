@@ -1,4 +1,4 @@
-"""Application-specific errors for the ETL command line interface."""
+﻿"""Application-specific errors for the ETL command line interface."""
 
 
 class EtlError(Exception):
@@ -7,7 +7,3 @@ class EtlError(Exception):
 
 class ConfigurationError(EtlError):
     """Raised when application configuration is invalid."""
-
-
-class PipelineNotImplementedError(EtlError):
-    """Raised by Phase 0 command placeholders."""

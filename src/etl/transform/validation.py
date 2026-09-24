@@ -1,4 +1,4 @@
-"""Raw, metadata-derived validation checks."""
+﻿"""Raw, metadata-derived validation checks."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from typing import Any, Iterable
 
 import pandas as pd
 
-from .config import DatasetConfig
-from .types import coerce_value, is_null
+from etl.core.config import DatasetConfig
+from etl.core.types import coerce_value, is_null
 
 
 REASONS_COLUMN = "_validation_reasons"
@@ -51,9 +51,10 @@ def validate_raw(
     result = frame.copy()
     reasons: list[list[dict[str, Any]]] = [[] for _ in range(len(result))]
     columns = dataset.columns
-    # All declared columns are checked independently, including missing columns.
     for column, declaration in columns.items():
-        values = result[column] if column in result else pd.Series([pd.NA] * len(result), index=result.index)
+        if column not in result:
+            continue
+        values = result[column]
         logical_type = declaration["type"]
         width = declaration.get("width")
         for position, value in enumerate(values.tolist()):

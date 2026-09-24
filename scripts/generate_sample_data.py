@@ -135,7 +135,7 @@ def _customers() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
             birth_date=["15/03/1987", "1995-07-22", "01/01/1990"][offset % 3],
             address=f"{12 + offset} le loi st, q {offset % 5 + 1}",
             city=["ho chi minh city", "ha noi", "da nang"][offset % 3],
-            country=["vietnam", "VN", "viet nam"][offset % 3],
+            country=["vn", "VN", "VN"][offset % 3],
             tier=["gold", "SILVER", "bronze", "PLATINUM"][offset % 4],
             score=650 + offset * 7,
             registered_at=["15/03/2024 09:30", "2024-06-01 08:00:00", "06/02/2024 10:15"][offset % 3],
@@ -143,7 +143,7 @@ def _customers() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
         ))
 
     # Additional trusted rows make the defective-row ratio close to one in six.
-    for customer_id in range(1016, 1025):
+    for customer_id in range(1016, 1036):
         valid.append(_customer_row(
             customer_id, name=f"Customer {customer_id}", email=f"customer{customer_id}@example.com",
             phone=f"0912345{customer_id % 1000:03d}", birth_date="1988-05-05",
@@ -193,7 +193,7 @@ def _customers() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
 def _car_rows() -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     fuels = ["PETROL", "DIESEL", "HYBRID", "ELECTRIC", "LPG"]
-    for number in range(1, 16):
+    for number in range(1, 31):
         rows.append({
             "car_id": f"CAR-{number:05d}", "brand_code": ["TOYOTA", "HONDA", "FORD"][number % 3],
             "model": ["Corolla", "Civic", "Ranger"][number % 3], "plate_number": f"51A-{number:05d}",
@@ -203,11 +203,11 @@ def _car_rows() -> list[dict[str, object]]:
             "last_service_at": f"2026-08-{number:02d} 09:00:00",
         })
     rows.extend([
-        {**rows[0], "car_id": "CAR-00016", "plate_number": "51A-1234"},  # pattern defect
-        {**rows[1], "car_id": "CAR-00017", "fuel_type": "STEAM", "daily_rate": "-10.00"},  # allowed/range
-        {**rows[2], "car_id": "CAR-00018", "manufacture_year": "1970"},  # range defect
-        {**rows[3], "car_id": "CAR-00019", "model": "M" * 81},  # max length defect
-        {**rows[4], "car_id": "CAR-00020", "seats": "many"},  # type defect
+        {**rows[0], "car_id": "CAR-00031", "plate_number": "51A-1234"},  # pattern defect
+        {**rows[1], "car_id": "CAR-00032", "fuel_type": "STEAM", "daily_rate": "-10.00"},  # allowed/range
+        {**rows[2], "car_id": "CAR-00033", "manufacture_year": "1970"},  # range defect
+        {**rows[3], "car_id": "CAR-00034", "model": "M" * 81},  # max length defect
+        {**rows[4], "car_id": "CAR-00035", "seats": "many"},  # type defect
     ])
     return rows
 
@@ -229,18 +229,18 @@ def _order_row(order_number: int, *, rng: random.Random) -> dict[str, object]:
 
 def _orders() -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     rng = random.Random(SEED)
-    valid = [_order_row(number, rng=rng) for number in range(1, 31)]
+    valid = [_order_row(number, rng=rng) for number in range(1, 36)]
     defects = [
         {**valid[0], "order_id": "ORD-2026-ABC123"},
-        {**valid[1], "customer_id": "oops"},
-        {**valid[2], "order_ts": "not-a-timestamp"},
-        {**valid[3], "currency": "BTC"},
-        {**valid[4], "payment_method": "CHEQUE"},
-        {**valid[5], "order_status": "UNKNOWN"},
+        {**valid[1], "order_id": "ORD-2026-000037", "customer_id": "oops"},
+        {**valid[2], "order_id": "ORD-2026-000038", "order_ts": "not-a-timestamp"},
+        {**valid[3], "order_id": "ORD-2026-000039", "currency": "BTC"},
+        {**valid[4], "order_id": "ORD-2026-000040", "payment_method": "CHEQUE"},
+        {**valid[5], "order_id": "ORD-2026-000041", "order_status": "UNKNOWN"},
     ]
     day_1 = valid + defects
     replayed = [dict(row) for row in valid[:10]]
-    new_rows = [_order_row(number, rng=rng) for number in range(31, 51)]
+    new_rows = [_order_row(number, rng=rng) for number in range(36, 56)]
     return day_1, replayed + new_rows
 
 

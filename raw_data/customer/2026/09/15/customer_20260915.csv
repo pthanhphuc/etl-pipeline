@@ -1,19 +1,19 @@
 customer_id,full_name,email,phone,birth_date,address_line,city,country,loyalty_tier,credit_score,registered_at,is_active
-1001,  nguyen   van an ,User+1001@Gmail.COM,0120 123 4567,15/03/1987,"12 le loi st, q 1",ho chi minh city,vietnam,gold,650,15/03/2024 09:30,true
+1001,  nguyen   van an ,User+1001@Gmail.COM,0120 123 4567,15/03/1987,"12 le loi st, q 1",ho chi minh city,vn,gold,650,15/03/2024 09:30,true
 1002,Tran Thi Binh,User+1002@company.vn,+84 912 345 678,1995-07-22,"13 le loi st, q 2",ha noi,VN,SILVER,657,2024-06-01 08:00:00,Y
-1003,le van cuong,User+1003@company.vn,0912.345.679,01/01/1990,"14 le loi st, q 3",da nang,viet nam,bronze,664,06/02/2024 10:15,Y
-1004,Pham Van D,User+1004@Gmail.COM,84912345680,15/03/1987,"15 le loi st, q 4",ho chi minh city,vietnam,PLATINUM,671,15/03/2024 09:30,Y
+1003,le van cuong,User+1003@company.vn,0912.345.679,01/01/1990,"14 le loi st, q 3",da nang,VN,bronze,664,06/02/2024 10:15,Y
+1004,Pham Van D,User+1004@Gmail.COM,84912345680,15/03/1987,"15 le loi st, q 4",ho chi minh city,vn,PLATINUM,671,15/03/2024 09:30,Y
 1005,Hoang Van E,User+1005@company.vn,(0912) 345 681,1995-07-22,"16 le loi st, q 5",ha noi,VN,gold,678,2024-06-01 08:00:00,true
-1006,Vo Thi F,User+1006@company.vn,120 123 4567,01/01/1990,"17 le loi st, q 1",da nang,viet nam,SILVER,685,06/02/2024 10:15,Y
-1007,Dr. maria nguyen,User+1007@Gmail.COM,0901-234-567,15/03/1987,"18 le loi st, q 2",ho chi minh city,vietnam,bronze,692,15/03/2024 09:30,Y
+1006,Vo Thi F,User+1006@company.vn,120 123 4567,01/01/1990,"17 le loi st, q 1",da nang,VN,SILVER,685,06/02/2024 10:15,Y
+1007,Dr. maria nguyen,User+1007@Gmail.COM,0901-234-567,15/03/1987,"18 le loi st, q 2",ho chi minh city,vn,bronze,692,15/03/2024 09:30,Y
 1008,nguyen van g,User+1008@company.vn,0918 234 568,1995-07-22,"19 le loi st, q 3",ha noi,VN,PLATINUM,699,2024-06-01 08:00:00,Y
-1009,de la cruz,User+1009@company.vn,0120 123 4567,01/01/1990,"20 le loi st, q 4",da nang,viet nam,gold,706,06/02/2024 10:15,true
-1010,  single  ,User+1010@Gmail.COM,+84 912 345 678,15/03/1987,"21 le loi st, q 5",ho chi minh city,vietnam,SILVER,713,15/03/2024 09:30,Y
+1009,de la cruz,User+1009@company.vn,0120 123 4567,01/01/1990,"20 le loi st, q 4",da nang,VN,gold,706,06/02/2024 10:15,true
+1010,  single  ,User+1010@Gmail.COM,+84 912 345 678,15/03/1987,"21 le loi st, q 5",ho chi minh city,vn,SILVER,713,15/03/2024 09:30,Y
 1011,McDONALD van k,User+1011@company.vn,0912.345.679,1995-07-22,"22 le loi st, q 1",ha noi,VN,bronze,720,2024-06-01 08:00:00,Y
-1012,mrs. ngo thi l,User+1012@company.vn,84912345680,01/01/1990,"23 le loi st, q 2",da nang,viet nam,PLATINUM,727,06/02/2024 10:15,Y
-1013,Van Der Meer,User+1013@Gmail.COM,(0912) 345 681,15/03/1987,"24 le loi st, q 3",ho chi minh city,vietnam,gold,734,15/03/2024 09:30,true
+1012,mrs. ngo thi l,User+1012@company.vn,84912345680,01/01/1990,"23 le loi st, q 2",da nang,VN,PLATINUM,727,06/02/2024 10:15,Y
+1013,Van Der Meer,User+1013@Gmail.COM,(0912) 345 681,15/03/1987,"24 le loi st, q 3",ho chi minh city,vn,gold,734,15/03/2024 09:30,true
 1014,da silva,User+1014@company.vn,120 123 4567,1995-07-22,"25 le loi st, q 4",ha noi,VN,SILVER,741,2024-06-01 08:00:00,Y
-1015,Tran Thi O,User+1015@company.vn,0901-234-567,01/01/1990,"26 le loi st, q 5",da nang,viet nam,bronze,748,06/02/2024 10:15,Y
+1015,Tran Thi O,User+1015@company.vn,0901-234-567,01/01/1990,"26 le loi st, q 5",da nang,VN,bronze,748,06/02/2024 10:15,Y
 1016,Customer 1016,customer1016@example.com,0912345016,1988-05-05,16 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
 1017,Customer 1017,customer1017@example.com,0912345017,1988-05-05,17 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
 1018,Customer 1018,customer1018@example.com,0912345018,1988-05-05,18 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
@@ -23,6 +23,17 @@ customer_id,full_name,email,phone,birth_date,address_line,city,country,loyalty_t
 1022,Customer 1022,customer1022@example.com,0912345022,1988-05-05,22 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
 1023,Customer 1023,customer1023@example.com,0912345023,1988-05-05,23 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
 1024,Customer 1024,customer1024@example.com,0912345024,1988-05-05,24 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1025,Customer 1025,customer1025@example.com,0912345025,1988-05-05,25 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1026,Customer 1026,customer1026@example.com,0912345026,1988-05-05,26 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1027,Customer 1027,customer1027@example.com,0912345027,1988-05-05,27 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1028,Customer 1028,customer1028@example.com,0912345028,1988-05-05,28 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1029,Customer 1029,customer1029@example.com,0912345029,1988-05-05,29 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1030,Customer 1030,customer1030@example.com,0912345030,1988-05-05,30 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1031,Customer 1031,customer1031@example.com,0912345031,1988-05-05,31 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1032,Customer 1032,customer1032@example.com,0912345032,1988-05-05,32 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1033,Customer 1033,customer1033@example.com,0912345033,1988-05-05,33 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1034,Customer 1034,customer1034@example.com,0912345034,1988-05-05,34 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
+1035,Customer 1035,customer1035@example.com,0912345035,1988-05-05,35 nguyen hue rd,ha noi,VN,SILVER,700,2024-06-03 08:00:00,Y
 1101,Hoang Van Type,type@example.com,0912345681,1991-02-02,3 ly thai to,ha noi,VN,BRONZE,650,2024-06-04 08:00:00,Y
 1102,,empty@example.com,0912345682,1993-08-08,11 tran phu,ha noi,VN,GOLD,690,,Y
 1103,XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX,long@example.com,0912345683,1993-08-08,11 tran phu,ha noi,VN,GOLD,690,2024-06-05 08:00:00,Y

@@ -1,9 +1,9 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 import pandas as pd
 import pytest
 
-from etl.readers import ReaderError, read_files
+from etl.extract.readers import ReaderError, read_files
 
 
 def test_csv_is_all_text_and_has_source_metadata(tmp_path: Path) -> None:

@@ -1,9 +1,9 @@
-"""Durable Parquet outputs for the transformation stage.
+﻿"""Durable Parquet outputs for the transformation stage.
 
 This module deliberately has no database or orchestration dependencies.  It
-accepts the result of :func:`etl.standardize.standardize`, writes the two
-handoff files, and returns enough information for a caller to decide whether
-the load task may proceed.
+accepts the result of :func:`etl.standardize.standardize`, writes one Parquet
+handoff, and returns enough information for a caller to decide whether the load
+task may proceed.
 """
 
 from __future__ import annotations
@@ -19,12 +19,16 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from .config import AppConfig, DatasetConfig, load_config
-from .paths import PathContext, build_paths
-from .validation import REASONS_COLUMN
+from etl.core.config import AppConfig, DatasetConfig, load_config
+from etl.core.errors import EtlError
+from etl.core.paths import PathContext
+from etl.transform.validation import REASONS_COLUMN
 
 
-class OutputError(ValueError):
+WARNING_REASON_COLUMN = "warning_reason"
+
+
+class OutputError(EtlError, ValueError):
     """Raised when a transformation output cannot be written or promoted."""
 
 
@@ -39,7 +43,6 @@ class FlagThresholdExceeded(OutputError):
 @dataclass(frozen=True)
 class OutputResult:
     trusted_path: Path
-    warning_path: Path
     summary_path: Path
     extracted: int
     trusted: int
@@ -74,8 +77,6 @@ def split_rows(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 def _output_columns(frame: pd.DataFrame, *, warning: bool) -> list[str]:
     """Select stable business, hash, audit, and (for warnings) reason fields."""
     columns = [column for column in frame.columns if column != REASONS_COLUMN]
-    if warning and REASONS_COLUMN in frame:
-        columns.append(REASONS_COLUMN)
     return list(dict.fromkeys(columns))
 
 
@@ -138,7 +139,9 @@ def _prepare_for_arrow(frame: pd.DataFrame, dataset: DatasetConfig, columns: lis
         )
     for column in result.columns:
         if column not in dataset.columns and column != "_source_line":
+            result[column] = result[column].astype("object")
             result[column] = result[column].map(lambda value: None if pd.isna(value) else str(value))
+            result[column] = result[column].astype("object")
     return result
 
 
@@ -177,6 +180,12 @@ def _write_summary(path: Path, *, result: OutputResult, flagged: pd.DataFrame) -
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _warning_reason(value: Any) -> str | None:
+    if not isinstance(value, (list, tuple)) or not value:
+        return None
+    return json.dumps(value, sort_keys=True, ensure_ascii=False, default=str)
+
+
 def write_outputs(
     frame: pd.DataFrame,
     dataset: DatasetConfig | str,
@@ -185,11 +194,11 @@ def write_outputs(
     config: AppConfig | None = None,
     output_root: str | Path | None = None,
 ) -> OutputResult:
-    """Split and write trusted/warning Parquet files and warning summary.
+    """Write one typed Parquet file plus a warning summary.
 
-    ``FlagThresholdExceeded`` is raised only after all three diagnostics are
-    persisted.  Its ``result`` attribute lets a CLI/DAG report paths while
-    preventing the subsequent load task from running.
+    Rows with validation/conversion reasons stay in the output and carry those
+    reasons in ``warning_reason``.  The loader filters those rows out before
+    writing to PostgreSQL.
     """
     config = config or load_config()
     if isinstance(dataset, str):
@@ -201,10 +210,8 @@ def write_outputs(
     if output_root is not None:
         root = Path(output_root)
         transform_partition = root / "transform" / dataset.name / context.source_date.isoformat()
-        warning_partition = root / "warning" / dataset.name / context.source_date.isoformat()
     else:
         transform_partition = context.transform_partition
-        warning_partition = context.warning_partition
     trusted, flagged = split_rows(frame)
     extracted = len(frame)
     if extracted != len(trusted) + len(flagged):
@@ -213,19 +220,16 @@ def write_outputs(
     ratio = (len(flagged) / extracted) if extracted else 0.0
     can_load = ratio <= threshold
     trusted_path = transform_partition / "trusted.parquet"
-    warning_path = warning_partition / "warning.parquet"
-    summary_path = warning_partition / "summary.json"
-    trusted_columns = _output_columns(trusted, warning=False)
-    warning_columns = _output_columns(flagged, warning=True)
-    # Use the full input schema for empty partitions so an empty side remains
-    # readable and compatible with a later append/promotion.
-    if not trusted_columns:
-        trusted_columns = _output_columns(frame, warning=False)
-    if not warning_columns:
-        warning_columns = _output_columns(frame, warning=True)
-    _write_parquet(trusted, trusted_path, dataset, columns=trusted_columns)
-    _write_parquet(flagged, warning_path, dataset, columns=warning_columns)
-    result = OutputResult(trusted_path, warning_path, summary_path, extracted, len(trusted), len(flagged), ratio, threshold, can_load)
+    summary_path = transform_partition / "summary.json"
+    output = frame.copy()
+    reasons = output[REASONS_COLUMN] if REASONS_COLUMN in output else pd.Series([[] for _ in range(len(output))])
+    output[WARNING_REASON_COLUMN] = reasons.map(_warning_reason)
+    output = output.drop(columns=[REASONS_COLUMN], errors="ignore")
+    output_columns = _output_columns(output, warning=False)
+    if WARNING_REASON_COLUMN in output_columns:
+        output_columns = [column for column in output_columns if column != WARNING_REASON_COLUMN] + [WARNING_REASON_COLUMN]
+    _write_parquet(output, trusted_path, dataset, columns=output_columns)
+    result = OutputResult(trusted_path, summary_path, extracted, len(trusted), len(flagged), ratio, threshold, can_load)
     _write_summary(summary_path, result=result, flagged=flagged)
     if not can_load:
         raise FlagThresholdExceeded(
@@ -238,16 +242,13 @@ def promote_warning_rows(
     corrected: pd.DataFrame | str | Path,
     *,
     trusted_path: str | Path,
-    warning_path: str | Path | None = None,
     dataset: DatasetConfig | str,
     config: AppConfig | None = None,
 ) -> int:
-    """Promote corrected warning rows into trusted Parquet without raw rereads.
+    """Promote corrected warning rows into the transform Parquet without raw rereads.
 
-    The corrected input must contain no reasons.  If ``warning_path`` is
-    supplied, promoted rows are removed by ``surrogate_key`` (or by their
-    complete row identity when no key is available) and the warning file is
-    rewritten.
+    The corrected input must contain no reasons.  Promoted rows are merged into
+    the handoff with an empty ``warning_reason`` so a later load can pick them up.
     """
     config = config or load_config()
     if isinstance(dataset, str):
@@ -262,6 +263,11 @@ def promote_warning_rows(
         if reasons.map(bool).any():
             raise OutputError("corrected warning rows still contain validation reasons")
         corrected_frame = corrected_frame.drop(columns=[REASONS_COLUMN])
+    if WARNING_REASON_COLUMN in corrected_frame:
+        warning_reasons = corrected_frame[WARNING_REASON_COLUMN].map(lambda value: False if pd.isna(value) else bool(str(value).strip()))
+        if warning_reasons.any():
+            raise OutputError("corrected warning rows still contain warning_reason")
+    corrected_frame[WARNING_REASON_COLUMN] = None
     if corrected_frame.empty:
         return 0
     existing = pd.read_parquet(trusted_file) if trusted_file.exists() else pd.DataFrame(columns=corrected_frame.columns)
@@ -270,17 +276,9 @@ def promote_warning_rows(
     if "surrogate_key" in merged:
         merged = merged.drop_duplicates(subset=["surrogate_key"], keep="last")
     _write_parquet(merged, trusted_file, dataset, columns=columns)
-    promoted = len(corrected_frame)
-    if warning_path is not None and Path(warning_path).exists():
-        warnings = pd.read_parquet(warning_path)
-        if "surrogate_key" in warnings and "surrogate_key" in corrected_frame:
-            keys = set(corrected_frame["surrogate_key"].dropna().tolist())
-            warnings = warnings.loc[~warnings["surrogate_key"].isin(keys)].copy()
-        _write_parquet(warnings, Path(warning_path), dataset, columns=_output_columns(warnings, warning=True))
-    return promoted
+    return len(corrected_frame)
 
 
 # Names that make the stage easy to discover from a pipeline implementation.
 persist_outputs = write_outputs
 split_and_write = write_outputs
-

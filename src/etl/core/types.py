@@ -1,4 +1,4 @@
-"""Shared, strict coercion helpers used by raw checks and later stages."""
+﻿"""Shared, strict coercion helpers used by raw checks and later stages."""
 
 from __future__ import annotations
 

@@ -1,11 +1,13 @@
-"""The single manually-authored Airflow entry point for this project."""
+﻿"""The single manually-authored Airflow entry point for this project."""
 
 from __future__ import annotations
+
+from datetime import datetime
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from etl.pipeline import load_source, transform_source
+from etl.core.pipeline import load_source, transform_source
 
 
 def _transform(**context: object) -> str:
@@ -27,9 +29,9 @@ def _load(**context: object) -> None:
 
 
 with DAG(
-    dag_id="metadata_etl",
+    dag_id="etl_dag",
     schedule=None,
-    start_date=None,
+    start_date=datetime(2026, 1, 1),
     catchup=False,
     max_active_runs=16,
 ) as dag:

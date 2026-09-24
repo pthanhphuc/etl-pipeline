@@ -1,11 +1,11 @@
-"""Command-line interface for local ETL execution."""
+﻿"""Command-line interface for local ETL execution."""
 
 import argparse
 import json
 import logging
 
-from .errors import EtlError
-from .logging_config import configure_logging
+from etl.core.errors import EtlError
+from etl.core.logging_config import configure_logging
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,43 +41,52 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _source_command(parser: argparse.ArgumentParser, handler: object) -> None:
-    parser.add_argument("--source-prefix", required=True, help="configured raw_data dataset/date prefix")
+    parser.add_argument("--source-prefix", help="configured raw_data dataset/date prefix")
     parser.add_argument("--run-id", help="isolated transform run ID")
     parser.set_defaults(handler=handler)
 
 
 def _init_db(args: argparse.Namespace) -> None:
-    from .pipeline import init_database
+    from etl.core.pipeline import init_database
     init_database()
 
 
 def _transform(args: argparse.Namespace) -> None:
-    from .pipeline import transform_source
+    from etl.core.pipeline import transform_source
+    _require_source_prefix(args)
     result = transform_source(args.source_prefix, run_id=args.run_id)
-    print(json.dumps({"run_id": result.run_id, "trusted": str(result.output.trusted_path), "warning": str(result.output.warning_path)}, indent=2))
+    print(json.dumps({"run_id": result.run_id, "output": str(result.output.trusted_path), "summary": str(result.output.summary_path)}, indent=2))
 
 
 def _load(args: argparse.Namespace) -> None:
-    from .pipeline import load_source
+    from etl.core.pipeline import load_source
+    _require_source_prefix(args)
     result = load_source(args.source_prefix, run_id=args.run_id)
     print(json.dumps({"inserts": len(result.inserts), "updates": len(result.updates), "unchanged": len(result.unchanged), "duplicates": len(result.duplicates)}))
 
 
 def _run(args: argparse.Namespace) -> None:
-    from .pipeline import load_source, transform_source
+    from etl.core.pipeline import load_source, transform_source
+    _require_source_prefix(args)
     result = transform_source(args.source_prefix, run_id=args.run_id)
     decision = load_source(args.source_prefix, run_id=result.run_id)
     print(json.dumps({"run_id": result.run_id, "inserted": len(decision.inserts), "updated": len(decision.updates)}, indent=2))
 
 
 def _report(args: argparse.Namespace) -> None:
-    from .pipeline import read_report
+    from etl.core.pipeline import read_report
+    _require_source_prefix(args)
     print(json.dumps(read_report(args.source_prefix, run_id=args.run_id), indent=2, sort_keys=True))
 
 
 def _promote(args: argparse.Namespace) -> None:
-    from .pipeline import promote_warning
+    from etl.core.pipeline import promote_warning
     print(promote_warning(args.source_prefix, args.corrected, run_id=args.run_id))
+
+
+def _require_source_prefix(args: argparse.Namespace) -> None:
+    if not args.source_prefix:
+        raise EtlError("--source-prefix is required for this command")
 
 
 def main(argv: list[str] | None = None) -> int:

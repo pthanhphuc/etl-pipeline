@@ -39,7 +39,22 @@ reference_data:
       true: ["Y", "YES", "TRUE", "1", "T"],
       false: ["N", "NO", "FALSE", "0", "F"],
     }
-  countries: { vietnam: VN, "viet nam": VN, vn: VN }
+  countries:
+    {
+      vietnam: VN,
+      "viet nam": VN,
+      vn: VN,
+      japan: JP,
+      jp: JP,
+      usa: US,
+      "united states": US,
+      us: US,
+      germany: DE,
+      de: DE,
+      korea: KR,
+      "south korea": KR,
+      kr: KR,
+    }
   date_formats: ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]
   timestamp_formats: ["%Y-%m-%d %H:%M:%S", "%d/%m/%Y %H:%M", "%m/%d/%Y %H:%M"]
   dial_plans:

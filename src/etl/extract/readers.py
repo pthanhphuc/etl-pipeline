@@ -1,4 +1,4 @@
-"""Format readers and raw-file extraction."""
+﻿"""Format readers and raw-file extraction."""
 
 from __future__ import annotations
 
@@ -9,10 +9,10 @@ from uuid import uuid4
 
 import pandas as pd
 
-from .config import AppConfig, DatasetConfig, load_config
-from .errors import EtlError
-from .paths import PathContext
-from .types import normalize_nulls
+from etl.core.config import AppConfig, DatasetConfig, load_config
+from etl.core.errors import EtlError
+from etl.core.paths import PathContext
+from etl.core.types import normalize_nulls
 
 
 class ReaderError(EtlError):
@@ -59,6 +59,19 @@ def _files_for(dataset: DatasetConfig, context: PathContext) -> list[Path]:
     pattern = dataset.source.get("file_glob", "**/*.csv")
     files = sorted((context.source_prefix).glob(pattern), key=lambda path: path.as_posix().casefold())
     return [path for path in files if path.is_file()]
+
+
+def _expected_raw_columns(dataset: DatasetConfig, config: AppConfig) -> tuple[str, ...]:
+    derived_outputs: set[str] = set()
+    input_columns = {step["column"] for step in dataset.standardization}
+    for step in dataset.standardization:
+        column = step["column"]
+        outputs = set(config.functions.get(step["function"], {}).get("outputs", ()))
+        derived_outputs.update(output for output in outputs if output != column)
+    required_columns = set(dataset.produced_columns) - derived_outputs
+    required_columns.update(input_columns)
+    required_columns.update(dataset.load.get("key_columns", ()))
+    return tuple(column for column in dataset.columns if column in required_columns)
 
 
 def read_files(
@@ -120,7 +133,7 @@ def read_dataset(
     options = dict(reader_settings.get("options", {}))
     return read_files(files, format_name=dataset.source.get("format", "csv"), options=options,
                       run_id=run_id, null_tokens=tuple(config.settings.get("null_tokens", ())),
-                      expected_columns=tuple(dataset.columns))
+                      expected_columns=_expected_raw_columns(dataset, config))
 
 
 extract = read_dataset

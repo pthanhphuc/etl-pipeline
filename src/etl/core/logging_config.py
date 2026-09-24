@@ -1,4 +1,4 @@
-"""Small, reusable logging setup for command-line entry points."""
+﻿"""Small, reusable logging setup for command-line entry points."""
 
 import logging
 

@@ -1,6 +1,6 @@
-from etl.config import load_config
-from etl.ddl import generate_create_table
-from etl.loader import decide_load
+﻿from etl.core.config import load_config
+from etl.load.ddl import generate_create_table
+from etl.load.loader import decide_load
 
 
 def test_generated_ddl_quotes_reserved_order_and_metadata() -> None:
@@ -14,7 +14,7 @@ def test_generated_ddl_quotes_reserved_order_and_metadata() -> None:
 
 def test_decision_modes_and_duplicate_composite_keys() -> None:
     incoming = [{"a": 1, "b": "x", "row_hash": "same"}, {"a": 1, "b": "x", "row_hash": "dup"}, {"a": 2, "b": "new", "row_hash": "n"}]
-    target = [{"a": 1, "b": "old", "row_hash": "same"}]
+    target = [{"a": 1, "b": "old", "row_hash": "old"}]
     result = decide_load(incoming, target, mode="differential_update", key_columns=["a"], compare_columns=["b"])
     assert [row["a"] for row in result.updates] == [1]
     assert [row["a"] for row in result.inserts] == [2]
@@ -30,4 +30,3 @@ def test_decision_empty_and_replace_all() -> None:
     assert len(result.inserts) == 1
     assert result.updates == ()
     assert result.unchanged == ()
-

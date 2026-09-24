@@ -1,41 +1,71 @@
-# Implementation notes
+﻿# Implementation notes
 
-## Phase 8 status
+## Decisions
 
-- Added unit and contract coverage for configuration, paths, readers, scalar
-  coercion, validation, conversions, standardization, outputs, pure load
-  decisions, CLI parsing, pipeline orchestration, and the Airflow DAG.
-- PostgreSQL checks are marked `integration` and require
-  `ETL_DATABASE_URL`; they skip with a clear setup message otherwise.
-- No PostgreSQL server or Airflow installation was available during this
-  handoff.
+- Output files are written directly to the configured assignment partitions:
+  `transform_data/{dataset}/{yyyy}/{mm}/{dd}/trusted.parquet` and
+  `transform_data/{dataset}/{yyyy}/{mm}/{dd}/summary.json`. Reruns overwrite the
+  same partition for that dataset/date; different datasets and dates do not
+  touch each other's files.
+- There is no separate `warning_data` output. Flagged rows stay in
+  `transform_data` with a populated `warning_reason` JSON column. The load task
+  filters those rows out before writing PostgreSQL, so a database outage can be
+  handled by rerunning the load command without touching `raw_data`.
+- `full_name_last` is not required. Single-token names are allowed, and the
+  table keeps `full_name_last` and `full_name_first` while deliberately
+  discarding `full_name_middle`.
+- `car_brand` uses `replace_all`. If a reference row is flagged, it remains in
+  transform output with `warning_reason`; the replace step loads only rows where
+  `warning_reason` is empty.
+- Conversion output names are derived from function suffixes, for example
+  `phone` plus `country_code` becomes `phone_country_code`.
 
-## Source inventory
+## Actual run counts
 
-These are physical CSV data rows, excluding headers, from the checked-in
-`raw_data` files. They are source counts, not trusted/flagged/loaded counts.
+These counts are from the deterministic sample generated with seed `20260915`
+and loaded into PostgreSQL database `etl_dealership`.
 
-| Dataset | 2026-09-15 | 2026-09-16 |
-| --- | ---: | ---: |
-| car | 20 | — |
-| car_brand | 13 | 11 |
-| customer | 30 | 25 |
-| order | 36 | 30 |
-| **Total** | **99** | **66** |
+| Dataset | Date | Extracted | Trusted | Flagged | Flag ratio | Load result |
+| --- | --- | ---: | ---: | ---: | ---: | --- |
+| car_brand | 2026-09-15 | 13 | 12 | 1 | 0.077 | 12 inserts |
+| car_brand | 2026-09-16 | 11 | 11 | 0 | 0.000 | replace_all, 11 inserts |
+| customer | 2026-09-15 | 41 | 36 | 5 | 0.122 | 36 inserts |
+| customer | 2026-09-16 | 25 | 25 | 0 | 0.000 | 10 inserts, 15 updates |
+| car | 2026-09-15 | 35 | 30 | 5 | 0.143 | 30 inserts |
+| order | 2026-09-15 | 41 | 35 | 6 | 0.146 | 35 inserts |
+| order | 2026-09-16 | 30 | 30 | 0 | 0.000 | 20 inserts, 10 skipped |
 
-## Decision placeholders
+Rerunning `order` for 2026-09-16 after it was already loaded produced
+`0 inserts, 0 updates, 30 unchanged`.
 
-- [ ] Record extracted, trusted, flagged, and loaded counts after PostgreSQL runs.
-- [ ] Record warning counts by check/function from each `summary.json`.
-- [ ] Confirm day-2 differential-update, insert-only, and replace-all outcomes.
-- [ ] Record PostgreSQL and Airflow versions and exact commands used.
+## Warning breakdown
 
-## Current decisions
+| Dataset | Date | Checks |
+| --- | --- | --- |
+| car_brand | 2026-09-15 | not_null: 1, primary_key: 1 |
+| customer | 2026-09-15 | constraint: 6, conversion: 2, max_length: 1, not_null: 2 |
+| car | 2026-09-15 | constraint: 6, max_length: 1, type: 1 |
+| order | 2026-09-15 | constraint: 5, conversion: 1, type: 2 |
 
-- Transform runs use isolated `_runs/<run_id>` output partitions.
-- Trusted and warning Parquet are the durable transform/load handoff; warning
-  rows never enter PostgreSQL.
-- `decide_load` is pure and testable without PostgreSQL; database writes are
-  transactional in the loader.
-- Airflow accepts only `source_prefix` in `dag_run.conf`; table and dataset
-  names remain metadata-driven.
+The check count can be larger than the flagged row count because one row may
+carry several reasons. All flagged rows retain `_source_file`, `_source_line`,
+`_run_id`, and a structured JSON reason in `warning_reason`.
+
+## Concurrency
+
+Runs are independent by dataset/date partition and target table. A customer run
+does not read car output, and an order run does not validate foreign keys
+against customer or car because the assignment declares cross-dataset checks out
+of scope. Concurrent reruns of the exact same dataset/date would overwrite the
+same Parquet handoff, so in production I would add an external run lock or a
+versioned publication step.
+
+## What I would improve with another week
+
+- Add an Airflow integration test in an environment with Airflow installed.
+- Add a small review UI or notebook for editing warning rows before promotion.
+- Add large-file chunking. The current design intentionally keeps one source
+  partition in one pandas DataFrame, which is simple but will break down when a
+  day's data no longer fits comfortably in memory.
+- Add richer locale-specific name handling. The current name parser covers the
+  required examples but is still rule-based.

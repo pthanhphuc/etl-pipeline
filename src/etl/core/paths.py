@@ -1,4 +1,4 @@
-"""Build and parse configured dataset/date paths."""
+﻿"""Build and parse configured dataset/date paths."""
 
 from __future__ import annotations
 
@@ -23,7 +23,6 @@ class PathContext:
     source_prefix: Path
     raw_files: Path
     transform_partition: Path
-    warning_partition: Path
 
 
 def _render(template: str, values: dict[str, Any]) -> Path:
@@ -36,18 +35,19 @@ def _render(template: str, values: dict[str, Any]) -> Path:
 def _values(config: AppConfig, dataset: str, source_date: date) -> dict[str, Any]:
     if dataset not in config.datasets:
         raise PathResolutionError(f"unknown dataset '{dataset}'")
-    return {"raw_root": config.paths["raw_root"], "transform_root": config.paths["transform_root"], "warning_root": config.paths["warning_root"], "dataset": dataset, "yyyy": f"{source_date.year:04d}", "mm": f"{source_date.month:02d}", "dd": f"{source_date.day:02d}"}
+    return {"raw_root": config.paths["raw_root"], "transform_root": config.paths["transform_root"], "dataset": dataset, "yyyy": f"{source_date.year:04d}", "mm": f"{source_date.month:02d}", "dd": f"{source_date.day:02d}"}
 
 
 def build_paths(dataset: str, source_date: date, config: AppConfig | None = None) -> PathContext:
     config = config or load_config()
     values = _values(config, dataset, source_date)
     paths = config.paths
+    source_prefix = _render(paths["source_prefix"], values)
+    values = {**values, "source_prefix": source_prefix.as_posix()}
     return PathContext(dataset, source_date,
-                       _render(paths["source_prefix"], values),
+                       source_prefix,
                        _render(paths["source_files"], values),
-                       _render(paths["transform_partition"], values),
-                       _render(paths["warning_partition"], values))
+                       _render(paths["transform_partition"], values))
 
 
 def build_source_prefix(dataset: str, source_date: date, config: AppConfig | None = None) -> str:

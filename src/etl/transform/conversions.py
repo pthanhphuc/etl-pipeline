@@ -1,4 +1,4 @@
-"""Metadata-driven scalar conversions used by the standardization stage.
+﻿"""Metadata-driven scalar conversions used by the standardization stage.
 
 The functions in this module deliberately know nothing about a dataset.  A
 function's registry entry describes its output names, while reference data
@@ -9,13 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 import re
 from typing import Any, Callable, Iterable
 
 import pandas as pd
 
-from .types import coerce_value, is_null, normalize_null
+from etl.core.types import coerce_value, is_null, normalize_null
 
 
 class ConversionError(ValueError):
@@ -60,17 +59,22 @@ def _telephone(value: Any, context: ConversionContext) -> dict[str, Any]:
     text = _text(value)
     strip = plan.get("strip_characters", " -().")
     number = re.sub(f"[{re.escape(strip)}]", "", text)
+    country_code = str(plan.get("country_code", ""))
+    if len(set(number.lstrip("+"))) == 1:
+        raise ConversionError("placeholder telephone number")
     if number.startswith("+"):
         number = number[1:]
-        country_code = str(plan.get("country_code", ""))
         national = number[len(country_code):] if country_code and number.startswith(country_code) else number
+    elif number.startswith("00") and country_code and number[2:].startswith(country_code):
+        national = number[2 + len(country_code):]
+    elif country_code and number.startswith(country_code):
+        national = number[len(country_code):]
     else:
         trunk = str(plan.get("trunk_prefix", ""))
         if trunk and number.startswith(trunk):
             national = number[len(trunk):]
         else:
             national = number
-        country_code = str(plan.get("country_code", ""))
     for old, new in plan.get("legacy_prefixes", {}).items():
         if national.startswith(str(old)):
             national = str(new) + national[len(str(old)):]
@@ -95,9 +99,11 @@ def _name(value: Any, context: ConversionContext) -> dict[str, Any]:
     if not parts:
         raise ConversionError("name has no tokens after honorific removal")
     order = context.options.get("name_order", "given_first")
+
     def display(part: str) -> str:
         value = part.title()
         return re.sub(r"^Mc([a-z])", lambda match: "Mc" + match.group(1).upper(), value)
+
     if order == "family_first":
         last, first, middle = parts[0], (parts[-1] if len(parts) > 1 else None), parts[1:-1]
     elif order == "given_first":
@@ -120,9 +126,12 @@ def _name(value: Any, context: ConversionContext) -> dict[str, Any]:
 def _address(value: Any, context: ConversionContext) -> dict[str, Any]:
     abbreviations = context.reference_data.get("address_abbreviations", {})
     text = re.sub(r"\s+", " ", _text(value)).strip(" ,")
+
     def replace(match: re.Match[str]) -> str:
         token = match.group(0)
-        return str(abbreviations.get(token.lower().rstrip("."), token))
+        replacement = str(abbreviations.get(token.lower().rstrip("."), token))
+        return replacement if replacement != token else token.title()
+
     text = re.sub(r"\b[\w.]+\b", replace, text)
     text = re.sub(r"\s*,\s*", ", ", text)
     if not text:
@@ -196,9 +205,18 @@ def apply_conversion(value: Any, function: str, *, options: dict[str, Any] | Non
     options = dict(options or {})
     registry = registry or {}
     context = ConversionContext(function, options, registry, reference_data or {}, tuple(null_tokens))
-    spec = registry.get(function, {})
-    outputs = list(spec.get("outputs", ()))
+    outputs = registered_outputs(function, options.get("column"), registry)
     if _empty(value, context):
         return {output: None for output in outputs} or {options.get("output", options.get("column", "value")): None}
     result = CONVERSIONS[function](value, context) if function in CONVERSIONS else _generic(value, context)
     return {output: result.get(output) for output in outputs} if outputs else result
+
+
+def registered_outputs(function: str, column: str | None, registry: dict[str, dict[str, Any]]) -> list[str]:
+    """Return configured outputs, deriving names from suffixes when available."""
+    spec = registry.get(function, {})
+    source = column or spec.get("input")
+    suffixes = list(spec.get("suffixes", ()))
+    if source and suffixes:
+        return [str(source) if suffix in ("", None) else f"{source}_{suffix}" for suffix in suffixes]
+    return list(spec.get("outputs", ()))

@@ -1,4 +1,4 @@
-"""Phase 8 verification tests.
+﻿"""Phase 8 verification tests.
 
 Database and Airflow tests are deliberately opt-in so the unit suite remains
 useful on a workstation that only has the core ETL dependencies installed.
@@ -14,15 +14,15 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from etl.config import ConfigurationError, load_config
-from etl.conversions import ConversionError, apply_conversion
-from etl.loader import decide_load
-from etl.paths import PathResolutionError, build_paths, parse_source_prefix
-from etl.pipeline import TransformResult, resolve_context
-from etl.readers import ReaderError, read_dataset, read_files
-from etl.standardize import standardize
-from etl.types import coerce_value
-from etl.validation import REASONS_COLUMN, validate_raw
+from etl.core.config import ConfigurationError, load_config
+from etl.transform.conversions import ConversionError, apply_conversion
+from etl.load.loader import decide_load
+from etl.core.paths import PathResolutionError, build_paths, parse_source_prefix
+from etl.core.pipeline import TransformResult, resolve_context
+from etl.extract.readers import ReaderError, read_dataset, read_files
+from etl.transform.standardize import standardize
+from etl.core.types import coerce_value
+from etl.transform.validation import REASONS_COLUMN, validate_raw
 
 
 CONFIG_DIR = Path(__file__).parents[1] / "config"
@@ -131,7 +131,7 @@ def test_pure_load_decisions_cover_modes_and_duplicates() -> None:
 
 
 def test_pipeline_context_and_transform_orchestration(monkeypatch: pytest.MonkeyPatch) -> None:
-    import etl.pipeline as pipeline
+    import etl.core.pipeline as pipeline
 
     config = load_config(CONFIG_DIR)
     context = resolve_context("raw_data/customer/2026/09/15", config=config)
@@ -157,7 +157,7 @@ def test_cli_commands_are_parseable() -> None:
 
 def test_airflow_dag_contract_when_airflow_is_installed() -> None:
     pytest.importorskip("airflow")
-    dag_module = importlib.import_module("dags.metadata_etl")
+    dag_module = importlib.import_module("dags.etl_dag")
     dag = dag_module.dag
     assert {task.task_id for task in dag.tasks} == {"transform_data", "load_data_into_db"}
     assert dag.max_active_runs == 16

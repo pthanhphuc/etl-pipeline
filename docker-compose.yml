@@ -1,10 +1,25 @@
 services:
+  etl:
+    build: .
+    image: metadata-driven-etl:latest
+    environment:
+      ETL_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/etl_dealership
+      PYTHONPATH: /app/src
+    volumes:
+      - ./config:/app/config:ro
+      - ./raw_data:/app/raw_data
+      - ./transform_data:/app/transform_data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["python", "-m", "etl", "--help"]
+
   postgres:
     image: postgres:16-alpine
     container_name: metadata-etl-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: metadata_etl
+      POSTGRES_DB: etl_dealership
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
@@ -12,7 +27,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d metadata_etl"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d etl_dealership"]
       interval: 5s
       timeout: 5s
       retries: 5

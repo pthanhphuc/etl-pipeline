@@ -1,4 +1,4 @@
-"""Pure load decisions and transactional PostgreSQL loading."""
+﻿"""Pure load decisions and transactional PostgreSQL loading."""
 
 from __future__ import annotations
 
@@ -13,8 +13,9 @@ from uuid import uuid4
 
 import pandas as pd
 
-from .config import DatasetConfig
-from .ddl import generate_create_table, quote_identifier, quote_qualified, table_columns
+from etl.core.config import DatasetConfig
+from etl.load.ddl import generate_create_table, quote_identifier, quote_qualified, table_columns
+from etl.transform.outputs import WARNING_REASON_COLUMN
 
 
 @dataclass(frozen=True)
@@ -91,8 +92,11 @@ def decide_load(
             unchanged.append(row)
             continue
         fields = comparison or [name for name in row if not name.startswith("_")]
-        if "row_hash" in row and "row_hash" in existing and row.get("row_hash") != existing.get("row_hash"):
-            updates.append(row)
+        if "row_hash" in row and "row_hash" in existing:
+            if row.get("row_hash") != existing.get("row_hash"):
+                updates.append(row)
+            else:
+                unchanged.append(row)
         elif any(row.get(field) != existing.get(field) for field in fields):
             updates.append(row)
         else:
@@ -126,8 +130,12 @@ def _copy_rows(cursor: Any, table_name: str, rows: list[dict[str, Any]], columns
         copy.write(buffer.getvalue())
 
 
-def _now() -> datetime:
-    return datetime.now().astimezone()
+def _fetch_target_rows(cursor: Any, target: str, columns: list[str]) -> list[dict[str, Any]]:
+    if not columns:
+        return []
+    cursor.execute(f"SELECT {', '.join(quote_identifier(column) for column in columns)} FROM {target}")
+    rows = cursor.fetchall()
+    return [dict(zip(columns, row)) for row in rows]
 
 
 def load_rows(
@@ -142,6 +150,7 @@ def load_rows(
     """Stage rows with COPY and apply one transactional, set-based load."""
     batch = batch_id or uuid4().hex
     incoming = [dict(row) for row in _records(rows)]
+    incoming = [row for row in incoming if not _has_warning_reason(row.get(WARNING_REASON_COLUMN))]
     target = quote_qualified(schema, dataset.target_table)
     physical_columns = [name for name, _ in table_columns(dataset, audit_columns=audit_columns)]
     business_columns = [name for name in physical_columns if name not in {"created_at", "updated_at", "batch_id"}]
@@ -150,11 +159,14 @@ def load_rows(
         for row in incoming:
             row.setdefault("batch_id", batch)
     staged_columns = list(dict.fromkeys(staged_columns + (["batch_id"] if incoming else [])))
-    decision = decide_load(incoming, [], mode="replace_all" if dataset.load["mode"] == "replace_all" else dataset.load["mode"],
-                          key_columns=dataset.load["key_columns"])
     with connection.transaction():
         cursor = connection.cursor()
         cursor.execute(generate_create_table(dataset, schema=schema, audit_columns=audit_columns))
+        mode = dataset.load["mode"]
+        compare_columns = [name for name in business_columns if name in staged_columns and name != "batch_id"]
+        target_rows = [] if mode == "replace_all" else _fetch_target_rows(cursor, target, compare_columns)
+        decision = decide_load(incoming, target_rows, mode=mode, key_columns=dataset.load["key_columns"],
+                               compare_columns=compare_columns)
         stage = "_etl_stage"
         stage_columns = [(name, type_name) for name, type_name in table_columns(dataset, audit_columns=audit_columns) if name in staged_columns]
         cursor.execute(f"CREATE TEMP TABLE {quote_identifier(stage)} (" + ", ".join(f"{quote_identifier(n)} {t}" for n, t in stage_columns) + ") ON COMMIT DROP")
@@ -167,7 +179,6 @@ def load_rows(
         if "created_at" in physical_columns:
             insert_sql_columns += ', "created_at", "updated_at"'
             select_sql += f", {now_sql}, {now_sql}"
-        mode = dataset.load["mode"]
         if mode == "replace_all":
             cursor.execute(f"DELETE FROM {target}")
             cursor.execute(f"INSERT INTO {target} ({insert_sql_columns}) SELECT {select_sql} FROM {quote_identifier(stage)}")
@@ -176,7 +187,10 @@ def load_rows(
             cursor.execute(f"INSERT INTO {target} ({insert_sql_columns}) SELECT {select_sql} FROM {quote_identifier(stage)} s WHERE NOT EXISTS (SELECT 1 FROM {target} t WHERE {key_predicate})")
             if mode == "differential_update":
                 updates = [name for name in insert_columns if name not in dataset.load["key_columns"] and name not in {"created_at", "updated_at"}]
-                changed = " OR ".join(f"t.{quote_identifier(name)} IS DISTINCT FROM s.{quote_identifier(name)}" for name in updates) or "FALSE"
+                if "row_hash" in updates:
+                    changed = f"t.{quote_identifier('row_hash')} IS DISTINCT FROM s.{quote_identifier('row_hash')}"
+                else:
+                    changed = " OR ".join(f"t.{quote_identifier(name)} IS DISTINCT FROM s.{quote_identifier(name)}" for name in updates) or "FALSE"
                 assignments = ", ".join(f"{quote_identifier(name)} = s.{quote_identifier(name)}" for name in updates)
                 if assignments:
                     cursor.execute(f"UPDATE {target} t SET {assignments}, \"updated_at\" = {now_sql} FROM {quote_identifier(stage)} s WHERE {key_predicate} AND ({changed})")
@@ -187,3 +201,13 @@ def load_rows(
 def load_parquet(connection: Any, dataset: DatasetConfig, path: str | Path, **kwargs: Any) -> LoadDecision:
     return load_rows(connection, dataset, pd.read_parquet(path), **kwargs)
 
+
+def _has_warning_reason(value: Any) -> bool:
+    if value is None or value is pd.NA:
+        return False
+    try:
+        if pd.isna(value):
+            return False
+    except (TypeError, ValueError):
+        pass
+    return bool(str(value).strip())

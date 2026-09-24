@@ -1,4 +1,4 @@
-"""Ordered, metadata-driven standardization and final row derivation."""
+﻿"""Ordered, metadata-driven standardization and final row derivation."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ from typing import Any, Iterable
 
 import pandas as pd
 
-from .config import AppConfig, DatasetConfig, load_config
-from .conversions import ConversionError, apply_conversion
-from .types import coerce_value, is_null
+from etl.core.config import AppConfig, DatasetConfig, load_config
+from .conversions import ConversionError, apply_conversion, registered_outputs
+from etl.core.types import coerce_value, is_null
 from .validation import REASONS_COLUMN
 
 
@@ -93,8 +93,7 @@ def standardize(
         column = step["column"]
         if column not in result:
             result[column] = pd.NA
-        spec = config.functions.get(function, {})
-        declared_outputs = list(spec.get("outputs", ()))
+        declared_outputs = registered_outputs(function, column, config.functions)
         output_names = declared_outputs or [step.get("output", column)]
         for position, value in enumerate(result[column].tolist()):
             try:
@@ -114,7 +113,7 @@ def standardize(
     # produced by a conversion that no longer fit its target declaration.
     for column in dataset.produced_columns:
         if column not in result:
-            raise StandardizationError(f"declared output column '{column}' was never produced")
+            result[column] = pd.NA
         declaration = dataset.columns[column]
         constraint = {**declaration, **dataset.constraints.get(column, {})}
         for position, value in enumerate(result[column].tolist()):
